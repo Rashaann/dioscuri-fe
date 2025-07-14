@@ -5,52 +5,75 @@ const Game: React.FC = () => {
   const gameRef = useRef<Phaser.Game | null>(null);
 
   useEffect(() => {
-    if (gameRef.current) return; // Prevent multiple instances
+    if (gameRef.current) return;
 
     let player: Phaser.Physics.Arcade.Sprite;
     let cursors: Phaser.Types.Input.Keyboard.CursorKeys;
-    // POSSIBLE CURSOR KEYS
-    // up: Phaser.Input.Keyboard.Key;
-    // down: Phaser.Input.Keyboard.Key;
-    // left: Phaser.Input.Keyboard.Key;
-    // right: Phaser.Input.Keyboard.Key;
-    // space: Phaser.Input.Keyboard.Key;
-    // shift: Phaser.Input.Keyboard.Key;
+    let background: Phaser.GameObjects.TileSprite;
 
-    // Scene lifecycle hooks
     const preload = function (this: Phaser.Scene) {
       this.load.image("player", "/assets/react.svg");
-      this.load.image("background", "/assets/background.png");
+      //   this.load.image("background", "/assets/background.png");
       this.load.image("obstacle", "/assets/rock.png");
     };
 
-    let background: Phaser.GameObjects.TileSprite;
-
     const create = function (this: Phaser.Scene) {
-      background = this.add.tileSprite(400, 300, 800, 600, "background");
-      player = this.physics.add.sprite(100, 450, "player");
+      // Background that fills the screen
+      //   background = this.add.tileSprite(
+      //     this.scale.width / 2,
+      //     this.scale.height / 2,
+      //     this.scale.width,
+      //     this.scale.height,
+      //     "background"
+      //   );
+
+      // Add player
+      player = this.physics.add.sprite(100, this.scale.height / 2, "player");
       player.setCollideWorldBounds(true);
 
-      cursors = this.input!.keyboard.createCursorKeys();
+      // Input
+      cursors = this.input?.keyboard?.createCursorKeys();
 
-      // Create a static group of obstacles
-      const obstacles = this.physics.add.staticGroup();
-      // Enable collisions
-      this.physics.add.collider(player, obstacles);
-      this.physics.world.setBounds(0, 0, 5000, 600);
-      this.cameras.main.setBounds(0, 0, 5000, 600);
+      // Set world bounds to support scrolling
+      const worldWidth = this.scale.width * 4;
+      const worldHeight = this.scale.height;
+      this.physics.world.setBounds(0, 0, worldWidth, worldHeight);
+      this.cameras.main.setBounds(0, 0, worldWidth, worldHeight);
       this.cameras.main.startFollow(player);
 
-      // Place 5 random obstacles across the level
-      for (let i = 0; i < 15; i++) {
-        const x = Phaser.Math.Between(300, 5000); // spread them out horizontally
-        const y = Phaser.Math.Between(550, 600); // ground level
-        const scale = Phaser.Math.FloatBetween(0.05, 0.1);
+      // Ground at bottom
+      const ground = this.physics.add.staticGroup();
+      const groundSegmentWidth = 200;
+      const numSegments = Math.floor(worldWidth / groundSegmentWidth);
+      const groundHeights: number[] = [];
 
-        const obstacle = obstacles.create(x, y, "obstacle");
-        obstacle.setScale(scale, scale).refreshBody(); // optional scale
+      for (let i = 0; i < numSegments + 1; i++) {
+        const x = i * groundSegmentWidth + groundSegmentWidth / 2;
+        const groundY = this.scale.height;
+
+        groundHeights.push(groundY);
+
+        const block = ground.create(x, groundY, "obstacle");
+        block.setScale(2, 1).refreshBody();
+        block.body.setSize(200, 100).setOffset(0, 50);
       }
 
+      this.physics.add.collider(player, ground);
+
+      // Obstacles
+      const obstacles = this.physics.add.staticGroup();
+
+      for (let i = 0; i < numSegments; i++) {
+        const x = Phaser.Math.Between(0, this.scale.width * 4);
+        const y = groundHeights[i] - 190;
+
+        const scale = Phaser.Math.FloatBetween(0.1, 0.2);
+        const obstacle = obstacles.create(x, y, "obstacle");
+        obstacle.setScale(scale, scale).refreshBody();
+        obstacle.body.setSize(40, 40).setOffset(10, 10);
+      }
+
+      this.physics.add.collider(player, obstacles);
     };
 
     const update = function (this: Phaser.Scene) {
@@ -60,49 +83,59 @@ const Game: React.FC = () => {
 
       if (cursors.left?.isDown) {
         player.setVelocityX(-160);
-        background.tilePositionX -= 220;
+        // background.tilePositionX -= 1;
       } else if (cursors.right?.isDown) {
         player.setVelocityX(160);
-        background.tilePositionX += 220;
-        background.tilePositionX += 220;
+        // background.tilePositionX += 1;
       } else if (cursors.up?.isDown) {
-        player.setVelocityY(-400);
-      } else if (cursors.down?.isDown) {
-        player.setVelocityY(160);
+        player.setVelocityY(-320);
+        // background.tilePositionX += 1;
       }
 
       if (
-        cursors.up.isDown &&
+        cursors.up?.isDown &&
         player.body &&
         (player.body as Phaser.Physics.Arcade.Body).touching.down
       ) {
-        player.setVelocityY(-330);
+        player.setVelocityY(-400);
       }
     };
 
-    // Phaser game config
+    // Initial game config
     const config: Phaser.Types.Core.GameConfig = {
       type: Phaser.AUTO,
-      width: 800,
-      height: 600,
-      //   backgroundColor: "#87ceeb",
+      width: window.innerWidth,
+      height: window.innerHeight,
+      backgroundColor: "#62D5FB",
       parent: "game-container",
       physics: {
         default: "arcade",
         arcade: { gravity: { x: 0, y: 1000 }, debug: true },
       },
       scene: { preload, create, update },
+      scale: {
+        mode: Phaser.Scale.RESIZE, // ensures canvas resizes
+        autoCenter: Phaser.Scale.CENTER_BOTH,
+      },
     };
 
     gameRef.current = new Phaser.Game(config);
 
+    // Resize listener
+    const resize = () => {
+      gameRef.current?.scale.resize(window.innerWidth, window.innerHeight);
+    };
+
+    window.addEventListener("resize", resize);
+
     return () => {
+      window.removeEventListener("resize", resize);
       gameRef.current?.destroy(true);
       gameRef.current = null;
     };
   }, []);
 
-  return <div id="game-container" />;
+  return <div id="game-container" style={{ width: "100%", height: "100vh" }} />;
 };
 
 export default Game;
