@@ -1,5 +1,17 @@
+'use client';
 import { useEffect, useRef } from "react";
-import Phaser from "phaser";
+import * as Phaser from "phaser";
+
+
+const getWindowSize = () => {
+  if (typeof window === 'undefined') {
+    return { width: 800, height: 600 }; // fallback values
+  }
+  return {
+    width: "100%",
+    height: "100%",
+  };
+};
 
 const Game: React.FC = () => {
   const gameRef = useRef<Phaser.Game | null>(null);
@@ -7,26 +19,17 @@ const Game: React.FC = () => {
   useEffect(() => {
     if (gameRef.current) return;
 
+    const { width, height } = getWindowSize();
+
     let player: Phaser.Physics.Arcade.Sprite;
     let cursors: Phaser.Types.Input.Keyboard.CursorKeys;
-    let background: Phaser.GameObjects.TileSprite;
 
     const preload = function (this: Phaser.Scene) {
-      //   this.load.image("background", "/assets/background.png");
       this.load.image("obstacle", "/assets/rock.png");
       this.load.image("player", "/assets/pupa_game_final.png");
     };
 
     const create = function (this: Phaser.Scene) {
-      // Background that fills the screen
-      //   background = this.add.tileSprite(
-      //     this.scale.width / 2,
-      //     this.scale.height / 2,
-      //     this.scale.width,
-      //     this.scale.height,
-      //     "background"
-      //   );
-
       // Add player
       player = this.physics.add.sprite(100, this.scale.height / 2, "player");
       player.setCollideWorldBounds(true);
@@ -109,8 +112,8 @@ const Game: React.FC = () => {
     // Initial game config
     const config: Phaser.Types.Core.GameConfig = {
       type: Phaser.AUTO,
-      width: window.innerWidth,
-      height: window.innerHeight,
+      width: width,
+      height: height,
       backgroundColor: "#62D5FB",
       parent: "game-container",
       physics: {
@@ -126,15 +129,10 @@ const Game: React.FC = () => {
 
     gameRef.current = new Phaser.Game(config);
 
-    // Resize listener
-    const resize = () => {
-      gameRef.current?.scale.resize(window.innerWidth, window.innerHeight);
-    };
-
-    window.addEventListener("resize", resize);
+    // window?.addEventListener("resize", resize);
 
     return () => {
-      window.removeEventListener("resize", resize);
+      // window?.removeEventListener("resize", resize);
       gameRef.current?.destroy(true);
       gameRef.current = null;
     };

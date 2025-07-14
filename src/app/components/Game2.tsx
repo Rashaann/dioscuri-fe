@@ -1,3 +1,5 @@
+'use client';
+
 const Game2 = () => {
 
     return <>Work in progress</>

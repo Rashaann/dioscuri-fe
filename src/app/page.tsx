@@ -1,11 +1,12 @@
+'use client';
+
 import { useState } from "react";
-import "./App.css";
-import Game from "./components/Game";
 import Intro from "./components/Intro";
+import Game from "./components/Game";
 import Game2 from "./components/Game2";
 
-function App() {
-  const [whichGame, setWhichGame] = useState("");
+export default function Home() {
+    const [whichGame, setWhichGame] = useState("");
   return (
     <div
       style={{
@@ -21,5 +22,3 @@ function App() {
     </div>
   );
 }
-
-export default App;
